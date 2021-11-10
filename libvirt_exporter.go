@@ -268,7 +268,7 @@ var (
 	libvirtDomainMetaInterfacesDesc = prometheus.NewDesc(
 		prometheus.BuildFQName("libvirt", "domain_interface", "meta"),
 		"Interfaces metadata. Source bridge, target device, interface uuid",
-		[]string{"domain", "source_bridge", "target_device", "virtual_interface"},
+		[]string{"domain", "source_bridge", "target_device", "mac_address"},
 		nil)
 	libvirtDomainInterfaceRxBytesDesc = prometheus.NewDesc(
 		prometheus.BuildFQName("libvirt", "domain_interface_stats", "receive_bytes_total"),
@@ -802,16 +802,15 @@ func CollectDomain(ch chan<- prometheus.Metric, stat libvirt.DomainStats) error 
 	// Report network interface statistics.
 	for _, iface := range stat.Net {
 		var SourceBridge string
-		var VirtualInterface string
-		// Additional info for ovs network
+		var MacAddress string
 		for _, net := range desc.Devices.Interfaces {
 			if net.Target.Device == iface.Name {
 				SourceBridge = net.Source.Bridge
-				VirtualInterface = net.Virtualport.Parameters.InterfaceID
+				MacAddress = net.Mac.Address
 				break
 			}
 		}
-		if SourceBridge != "" || VirtualInterface != "" {
+		if SourceBridge != "" || MacAddress != "" {
 			ch <- prometheus.MustNewConstMetric(
 				libvirtDomainMetaInterfacesDesc,
 				prometheus.GaugeValue,
@@ -819,7 +818,7 @@ func CollectDomain(ch chan<- prometheus.Metric, stat libvirt.DomainStats) error 
 				domainName,
 				SourceBridge,
 				iface.Name,
-				VirtualInterface)
+				MacAddress)
 		}
 		if iface.RxBytesSet {
 			ch <- prometheus.MustNewConstMetric(
